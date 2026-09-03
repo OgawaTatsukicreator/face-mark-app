@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 顔マスク処理アプリケーション 基本仕様書
+## 1. システム概要
+ユーザーがアップロードした画像から顔領域を自動検出し、顔部分にマスク（スタンプや図形）を描画して表示・編集するWebアプリケーション。
 
-## Getting Started
+## 2. システム構成・役割分担
+* **フロントエンド (Client Side / ブラウザ)**
+    * 画面UIの表示（画像の選択、ドラッグ＆ドロップ領域、ボタン配置）
+    * 選択された画像のプレビュー表示
+    * Canvas等を用いた顔領域へのマスク描画処理
+* **バックエンド / API Route (Server Side / Node.js)**
+    * フロントエンドから画像データを受信
+    * 顔検知API（外部サーバー）へのプロキシ（中継）処理
+    * 機密データ保護: APIキー（x-api-key）をサーバーサイドでのみ保持し、ブラウザ側に露出させない
+* **顔検知サーバー (外部 API)**
+    * 画像を受け取り、顔の位置座標データ（box）を JSON 形式で返却
+## 3. 画面設計・UI 遷移仕様
 
-First, run the development server:
+| 画面名 | 構成要素 | アクション / 遷移 |
+| :--- | :--- | :--- |
+| **1. 画像アップロード画面** | ・D&D 対応ドロップエリア<br>・「画像を削除」ボタン<br>・「画像を送信」ボタン | ・画像をドロップ/選択 ➔ プレビュー状態<br>・「画像を送信」押下 ➔ **画面2** へ遷移 |
+| **2. プレビュー画面** | ・選択画像のプレビュー<br>・「画像を削除」ボタン<br>・「画像をマスク」ボタン | ・「画像を削除」押下 ➔ **画面1** へ戻る<br>・「画像をマスク」押下 ➔ API リクエスト実行後 **画面3** へ遷移 |
+| **3. マスク結果画面** | ・マスク描画済み画像 (Canvas)<br>・「戻る」ボタン | ・「戻る」押下 ➔ **画面2** へ戻る |
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 4. 機能要件
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### ① バックエンド (API Route: `/api/detect`)
+* **エンドポイント:** `POST /api/detect`
+* **入力:** `multipart/form-data`（画像ファイル）
+* **処理:** 環境変数 (`.env.local`) から API キーを取得し、外部 API (`https://compreface.webfrontier.co.jp/...`) へリクエストを中継
+* **出力:** 顔の座標データ (JSON) またはエラーメッセージ
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### ② フロントエンド (`src/app/page.tsx`)
+* **ファイル入力:** Drag & Drop および ファイル選択ダイアログ対応
+* **API 通信:** プレビュー画面から `/api/detect` へ画像を送信し座標を取得
+* **マスク描画:** 取得した `x_min`, `y_min`, `x_max`, `y_max` の座標に基づき、画像上の顔部分にマスクを描画
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 5. 非機能要件・エラー処理要件
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* **エラーハンドリング:**
+  * *非画像ファイル選択時:* 「画像ファイルを選択してください」の警告表示
+  * *顔未検出時:* 「顔が検出されませんでした」のアラート通知
+  * *API 通信失敗時:* サーバーエラーメッセージの表示と再試行案内
+* **セキュリティ:**
+  * API キーは `.env.local` で管理し、Git にコミットしない
+* **コンプライアンス:**
+  * 使用するマスク素材やライブラリのライセンス確認（商用・二次利用可否）
