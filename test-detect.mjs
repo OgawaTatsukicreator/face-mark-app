@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
-const API_URL = "https://compreface.webfrontier.co.jp/api/v1/detection/detect"
-const API_KEY = "7700b4a7-bd1f-4063-9115-7f125371cf80"; // 後で環境変数化する
+const API_URL = "FACE_API_URL"
+const API_KEY = "FACE_API_KEY"; // 後で環境変数化する
 
 async function main() {
     const fileBuffer = readFileSync("./face.jpg");
