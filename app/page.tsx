@@ -1,25 +1,15 @@
-"use client"; //このファイルがブラウザ側で実行されるコンポーネントであることをNext.jsに伝える
+"use client";
 
-import { useState, DragEvent } from "react"; //useState→Reactフック、DragEvent→D&D機能の実装にあたっての型定義
+import { useState } from "react";
 
-type Step = "upload" | "preview" | "masked"; //画面遷移状態を表すUnion型
+type Screen = "upload" | "preview" | "result";
 
-export default function ImageProcessor(){
-  //現在のステップを管理(初期値は""upload")
-  const [step, setStep] = useState<Step>("upload"); //画面遷移のステータス確認
-  const [image, setImage] = useState<File | null>(null); //写真がアップロードされているか
-  const [isDragAction, setIsDragActive] = useState(false); //ドラックアクションの判定
+export default function Home() {
+  const [screen, setScreen] = useState<Screen>("upload");
 
-  //ドラック系のイベントハンドラー
-  const handleDrag = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.type === "dragenter" || e.type === "dragover") {
-      setIsDragActive(true);
-    }else if (e.type === "dragleave") {
-      setIsDragActive(false);
-    }
-  };
-
-
+  return (
+    <main className="min-h -screen flec items-center justify-center bg-slate-50 pc-4">
+      <p>現在の画面: {screen}</p>
+    </main>
+  )
 }
