@@ -9,7 +9,7 @@ export default function Home() {
 
   return (
     <main className="min-h -screen flec items-center justify-center bg-slate-50 pc-4">
-      <p>現在の画面: {screen}</p>
+      <p className="text-lg font-semibold text-blue-600">現在の画面: {screen}</p>
     </main>
   )
 }
