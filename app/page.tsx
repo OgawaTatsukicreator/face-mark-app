@@ -54,6 +54,8 @@ export default function Home() {
     setFile(null);
     setPreviewUrl(null);
     setError(null);
+    setBox(null);
+    setApiError(null);
     setScreen("upload");
   };
 
