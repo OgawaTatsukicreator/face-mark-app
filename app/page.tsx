@@ -58,8 +58,41 @@ export default function Home() {
   };
 
   // 今はダミー。実際のAPI連携(/api/detect呼び出し)は明日(9/8)実装する
-  const handleMask = () => {
- 
+  const handleMask = async () => {
+    if (!file) return;
+
+    setIsLoading(true);
+    setApiError(null)
+
+    try {
+      const formData = new FormData();
+      formData.append("file",file);
+
+      const response = await fetch("/api/detect", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("サーバーエラー(ステータス: ${response.status}) ");
+      }
+
+      const data = await response.json();
+
+      if (!data.result || data.result.length === 0) {
+        setApiError("顔が検出されませんでした");
+        setIsLoading(false);
+        return;
+      }
+
+      setBox(data.result[0].box);
+      setScreen("result");
+    } catch (err) {
+      console.error("マスク処理エラー:", err);
+      setApiError("通信に失敗しました。もう一度お試しください");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleBack = () => {
