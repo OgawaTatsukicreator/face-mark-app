@@ -18,6 +18,9 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [box, setBox] = useState<Box | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const acceptFile = (candidate: File | undefined) => {
     if (!candidate) return;
