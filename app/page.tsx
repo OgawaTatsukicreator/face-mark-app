@@ -5,6 +5,12 @@ import { useRef, useState, DragEvent, ChangeEvent, useEffect } from "react";
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type Screen = "upload" | "preview" | "result";
+type Box = {
+  x_min: Number;
+  y_min: Number;
+  x_max: Number;
+  y_max: Number;
+};
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("upload");
@@ -50,7 +56,7 @@ export default function Home() {
 
   // 今はダミー。実際のAPI連携(/api/detect呼び出し)は明日(9/8)実装する
   const handleMask = () => {
-    setScreen("result");
+ 
   };
 
   const handleBack = () => {
