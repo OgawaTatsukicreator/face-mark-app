@@ -11,6 +11,7 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const acceptFile = (candidate: File | undefined) => {
     if (!candidate) return;
@@ -26,19 +27,6 @@ export default function Home() {
     setScreen("preview");
   };
 
-  const handleRemove = () => {
-  if (previewUrl) URL.revokeObjectURL(previewUrl);
-  setFile(null);
-  setPreviewUrl(null);
-  setError(null);
-  setScreen("upload");
-};
-
-const handleMask = () => {
-  // 今はダミー
-  console.log("画像をマスクボタンが押されました");
-};
-
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     acceptFile(e.dataTransfer.files?.[0]);
@@ -52,7 +40,40 @@ const handleMask = () => {
     acceptFile(e.target.files?.[0]);
   };
 
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const handleRemove = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setPreviewUrl(null);
+    setError(null);
+    setScreen("upload");
+  };
+
+  // 今はダミー。実際のAPI連携(/api/detect呼び出し)は明日(9/8)実装する
+  const handleMask = () => {
+    setScreen("result");
+  };
+
+  const handleBack = () => {
+    setScreen("preview");
+  };
+
+  // 画面3表示時、元画像をCanvasに描画する（マスク処理自体は明日以降）
+  useEffect(() => {
+    if (screen !== "result" || !previewUrl || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      // TODO: APIから取得したbox座標をもとにマスクを描画する（次工程）
+    };
+    img.src = previewUrl;
+  }, [screen, previewUrl]);
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
@@ -70,6 +91,9 @@ const handleMask = () => {
           onRemove={handleRemove}
           onMask={handleMask}
         />
+      )}
+      {screen === "result" && (
+        <ResultScreen canvasRef={canvasRef} onBack={handleBack} />
       )}
     </main>
   );
@@ -145,7 +169,7 @@ function PreviewScreen({
 }) {
   return (
     <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
-      <h1>
+      <h1 className="mb-6 text-lg font-semibold text-slate-800">
         顔をマスクする
       </h1>
     
@@ -180,7 +204,7 @@ function ResultScreen({
   canvasRef,
   onBack
 }: {
-  canvasRef: React.RefObject<HTMLCanvasElement>;
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   onBack: () => void;
 }) {
   return (
@@ -189,7 +213,7 @@ function ResultScreen({
         マスク結果
       </h1>
 
-      <div>
+      <div className="flex h-48 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
         <canvas ref={canvasRef} className="max-h-full max-w-full object-contain" />
       </div>
 
