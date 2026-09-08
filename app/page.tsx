@@ -113,6 +113,8 @@ export default function Home() {
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
       // TODO: APIから取得したbox座標をもとにマスクを描画する（次工程）
+      console.log("画像サイズ:", img.width, img.height)
+      console.log("box座標:", box)
     };
     img.src = previewUrl;
   }, [screen, previewUrl]);
