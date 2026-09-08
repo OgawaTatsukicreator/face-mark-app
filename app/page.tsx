@@ -6,10 +6,10 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 type Screen = "upload" | "preview" | "result";
 type Box = {
-  x_min: Number;
-  y_min: Number;
-  x_max: Number;
-  y_max: Number;
+  x_min: number;
+  y_min: number;
+  x_max: number;
+  y_max: number;
 };
 
 export default function Home() {
@@ -76,7 +76,7 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error("サーバーエラー(ステータス: ${response.status}) ");
+        throw new Error('サーバーエラー(ステータス: ${response.status}) ');
       }
 
       const data = await response.json();
