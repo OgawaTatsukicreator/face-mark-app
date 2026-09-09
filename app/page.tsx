@@ -28,9 +28,7 @@ function drawMask(ctx: CanvasRenderingContext2D, box: Box) {
   const centerX = box.x_min + width / 2;
   const centerY = box.y_min + height / 2;
 
-  // フォントサイズは顔の高さに合わせる（絵文字が顔の大きさに応じて拡大縮小される）
-  const fontSize = height;
-  ctx.font = `${fontSize}px sans-serif`;
+  ctx.font = `${size}px sans-serif`;
 
   // 文字の描画位置を中央基準にする（デフォルトは左上基準なので調整が必要）
   ctx.textAlign = "center";
