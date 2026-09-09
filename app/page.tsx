@@ -128,6 +128,13 @@ export default function Home() {
       }
  
       const data = await response.json();
+      
+      // resultが配列であることを確認してから中身を見る
+      if (!Array.isArray(data.result)) {
+        setApiError("サーバーからの応答が正しくありませんでした");
+        setIsLoading(false);
+        return;
+      }
  
       // 顔検知APIの仕様上、顔が見つからない場合はresultが空配列で返ってくる
       if (!data.result || data.result.length === 0) {
