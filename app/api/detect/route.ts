@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
             method: "POST",
             headers: { "x-api-key": apiKey },
             body: externalFormData,
+            signal: AbortSignal.timeout(10_000), // 10秒でタイムアウト
         });
  
         // 外部APIからのレスポンス（顔の座標情報など）をそのままJSONとして受け取る
