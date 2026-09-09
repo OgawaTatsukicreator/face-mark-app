@@ -4,7 +4,7 @@ import { useRef, useState, DragEvent, ChangeEvent, useEffect,} from "react";
  
 // 受け付ける画像形式（これ以外はacceptFileでエラーにする）
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
  
 // 画面遷移図の3画面に対応するstate
 type Screen = "upload" | "preview" | "result";
@@ -58,6 +58,12 @@ export default function Home() {
     // 画像形式チェック：ACCEPTED_TYPESに含まれない場合はエラー表示して処理を止める
     if (!ACCEPTED_TYPES.includes(candidate.type)) {
       setError("画像ファイル（jpg / png / webp）を選択してください");
+      return;
+    }
+
+    //ファイルサイズチェック
+    if (candidate.size > MAX_FILE_SIZE) {
+      setError("ファイルサイズが大きすぎます(10MB以下にしてください)");
       return;
     }
  
@@ -246,7 +252,7 @@ function UploadScreen({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp"
           onChange={onFileChange}
           className="hidden" // 見た目上は非表示。クリックはdiv側で拾う
         />

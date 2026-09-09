@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
         // ブラウザから送られてきたmultipart/form-dataを解析
         const formData = await request.formData();
         const file = formData.get("file");
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
  
         // fileが存在しない、またはBlob（バイナリデータ）でない場合はリクエスト不正として400を返す
         // 【注意】ここは以前 !(file instanceof Blob) の「!」が抜けていて
@@ -17,6 +18,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: "画像ファイルが送信されていません" },
                 { status: 400 }
+            );
+        }
+
+        // サーバー側でもサイズチェック（フロントを経由しない直接アクセス対策）
+        if (file.size > MAX_FILE_SIZE) {
+            return NextResponse.json(
+                { error: "ファイルサイズが大きすぎます（10MB以下にしてください）" },
+                { status: 413 }
             );
         }
  
