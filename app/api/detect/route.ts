@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
         const formData = await request.formData();
         const file = formData.get("file");
         const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
  
         // fileが存在しない、またはBlob（バイナリデータ）でない場合はリクエスト不正として400を返す
         // 【注意】ここは以前 !(file instanceof Blob) の「!」が抜けていて
@@ -26,6 +27,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: "ファイルサイズが大きすぎます（10MB以下にしてください）" },
                 { status: 413 }
+            );
+        }
+
+        // MIMEタイプの検証
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+            return NextResponse.json(
+                { error: "対応していないファイル形式です" },
+                { status: 415 }
             );
         }
  
