@@ -1,9 +1,10 @@
 "use client";
  
-import { useRef, useState, DragEvent, ChangeEvent, useEffect } from "react";
+import { useRef, useState, DragEvent, ChangeEvent, useEffect,} from "react";
  
 // 受け付ける画像形式（これ以外はacceptFileでエラーにする）
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
  
 // 画面遷移図の3画面に対応するstate
 type Screen = "upload" | "preview" | "result";
