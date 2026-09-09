@@ -18,7 +18,25 @@ type Box = {
   x_max: number;
   y_max: number;
 };
- 
+
+
+function drawMask(ctx: CanvasRenderingContext2D, box: Box) {
+  const width = box.x_max - box.x_min;
+  const height = box.y_max - box.y_min;
+  const centerX = box.x_min + width / 2;
+  const centerY = box.y_min + height / 2;
+
+  // フォントサイズは顔の高さに合わせる（絵文字が顔の大きさに応じて拡大縮小される）
+  const fontSize = height;
+  ctx.font = `${fontSize}px sans-serif`;
+
+  // 文字の描画位置を中央基準にする（デフォルトは左上基準なので調整が必要）
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillText("😊", centerX, centerY);
+}
+
 export default function Home() {
   // ---- 画面遷移・ファイル関連のstate ----
   const [screen, setScreen] = useState<Screen>("upload");
@@ -145,6 +163,10 @@ export default function Home() {
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
+
+      if (box) {
+        drawMask(ctx, box);
+      }
  
       // 【動作確認用ログ】画像サイズとbox座標の関係を目視で確認するためのもの。
       // 座標データ取得の確認が済んだら削除してよい。
