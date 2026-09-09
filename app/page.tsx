@@ -91,7 +91,7 @@ export default function Home() {
     setFile(null);
     setPreviewUrl(null);
     setError(null);
-    setBox(null); // 前回のマスク結果を引きずらないようにリセット
+    setBoxes([]); // 前回のマスク結果を引きずらないようにリセット
     setApiError(null); // 前回のAPIエラーメッセージもリセット
     setScreen("upload"); // 画面遷移図：画像を削除 → 画面1へ戻る
   };
@@ -167,20 +167,20 @@ export default function Home() {
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
 
-      if (box) {
+      boxes.forEach((box) => {
         drawMask(ctx, box);
-      }
+      })
  
       // 【動作確認用ログ】画像サイズとbox座標の関係を目視で確認するためのもの。
       // 座標データ取得の確認が済んだら削除してよい。
       console.log("画像サイズ:", img.width, img.height);
-      console.log("box座標:", box);
+      console.log("box座標:", boxes);
     };
     img.src = previewUrl;
     // 【修正】boxが更新されたタイミングでも再実行されるよう依存配列に追加。
     // 元のコードはscreenとpreviewUrlのみだったため、
     // box更新のタイミング次第では古い値を参照するリスクがあった。
-  }, [screen, previewUrl, box]);
+  }, [screen, previewUrl, boxes]);
  
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
