@@ -23,6 +23,8 @@ type Box = {
 function drawMask(ctx: CanvasRenderingContext2D, box: Box) {
   const width = box.x_max - box.x_min;
   const height = box.y_max - box.y_min;
+
+  const size = Math.min(width, height) * 1.1; //スタンプ崩れ防止と1.1倍によって幅の余裕を持たせる
   const centerX = box.x_min + width / 2;
   const centerY = box.y_min + height / 2;
 
@@ -47,7 +49,7 @@ export default function Home() {
  
   // ---- 9/8で追加：顔検知API連携用のstate ----
   const [isLoading, setIsLoading] = useState(false); // API通信中かどうか（ボタンの無効化・表示切替に使う）
-  const [box, setBox] = useState<Box | null>(null); // APIから取得した顔の座標
+  const [boxes, setBoxes] = useState<Box[]>([]); // boxを配列で扱うようにする
   const [apiError, setApiError] = useState<string | null>(null); // API通信で発生したエラーメッセージ
  
   // ---- ファイルを受け取った時の共通処理（D&Dでもダイアログ選択でも共通） ----
@@ -129,8 +131,9 @@ export default function Home() {
         return;
       }
  
-      // 正常に座標が取得できた場合：stateに保存して結果画面へ遷移
-      setBox(data.result[0].box);
+      // 正常に座標が取得できた場合：検出された全ての顔の座標を保存する
+      const detectedBoxes = data.result.map((r: {box: Box }) => r.box);
+      setBoxes(detectedBoxes);
       setScreen("result"); // 画面遷移図：画像をマスク → 画面3へ
     } catch (err) {
       // ネットワーク切断、サーバーダウンなど、fetch自体が失敗した場合もここに来る
