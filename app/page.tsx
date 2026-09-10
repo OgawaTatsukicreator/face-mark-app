@@ -79,7 +79,7 @@ export default function Home() {
   //画像の読み込みに失敗した場合の共通処理
   const handleImageError = () => {
     handleRemove(); //状態をリセットする
-    setApiError("画像を読み込めませんでした。別の画像を選択してください"); //エラーメッセージをセット
+    setError("画像を読み込めませんでした。別の画像を選択してください"); //エラーメッセージをセット
   }
  
   // ドロップ時のハンドラ：ブラウザのデフォルト動作（画像を別タブで開く等）を止めてacceptFileに渡す
@@ -191,7 +191,7 @@ export default function Home() {
 
     img.onerror = () => {
       console.error("Canvas描画用の画像読み込みに失敗しました");
-      setApiError("画像を読み込みませんでした");
+      setApiError("画像を読み込めませんでした");
       setScreen("preview");
     };
 
