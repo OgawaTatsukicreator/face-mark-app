@@ -119,15 +119,22 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
+
+      // レスポンスのJSON本文は、成功・失敗どちらの場合でも先に読んでおく
+      const data = await response.json().catch(() => null);
  
-      // ステータスが200番台以外は異常とみなし、catchブロックに処理を移す
-      // 【修正】ダブルクォート("...")のままだと${response.status}が展開されず
-      // 文字列そのまま出力されてしまうため、バッククォート(`...`)に変更。
+      // サーバー(/api/detect)がエラーを返した場合：ここで処理を完結させる
+      // （catchには送らない。catchはfetch自体が失敗した場合専用にするため）
       if (!response.ok) {
-        throw new Error(`サーバーエラー（ステータス: ${response.status}）`);
+        // サーバーが返している{error:"..."}を優先して表示
+        // もしそのプロパティがなければステータスコードだけのメッセージにフォールバックする
+        const message = data && typeof data.error === "string" ? data.error : `サーバーエラー(ステータス: ${response.status})`;
+        setApiError(message);
+        setIsLoading(false);
+        return;
+
       }
- 
-      const data = await response.json();
+
       
       // resultが配列であることを確認してから中身を見る
       if (!Array.isArray(data.result)) {
@@ -137,7 +144,7 @@ export default function Home() {
       }
  
       // 顔検知APIの仕様上、顔が見つからない場合はresultが空配列で返ってくる
-      if (!data.result || data.result.length === 0) {
+      if (data.result.length === 0) {
         setApiError("顔が検出されませんでした");
         setIsLoading(false);
         return;
