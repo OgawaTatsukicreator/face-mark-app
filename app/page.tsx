@@ -109,7 +109,6 @@ export default function Home() {
     setApiError(null); // 前回のAPIエラーメッセージもリセット
     setScreen("upload"); // 画面遷移図：画像を削除 → 画面1へ戻る
   };
-  
  
   // 「画像をマスク」ボタン押下時：バックエンド(/api/detect)へ画像を送信し、顔の座標を取得する
   const handleMask = async () => {
@@ -189,6 +188,13 @@ export default function Home() {
     if (!ctx) return;
  
     const img = new Image();
+
+    img.onerror = () => {
+      console.error("Canvas描画用の画像読み込みに失敗しました");
+      setApiError("画像を読み込みませんでした");
+      setScreen("preview");
+    };
+
     img.onload = () => {
       // canvasのサイズを元画像の実サイズに合わせる
       canvas.width = img.width;
@@ -230,6 +236,7 @@ export default function Home() {
           onMask={handleMask}
           isLoading={isLoading}
           apiError={apiError}
+          onImageError={handleImageError}
         />
       )}
  
@@ -241,9 +248,9 @@ export default function Home() {
   );
 }
  
-// ============================================================
+
 // 画面1: アップロード画面
-// ============================================================
+
 function UploadScreen({
   error,
   onDrop,
@@ -310,21 +317,23 @@ function UploadScreen({
   );
 }
  
-// ============================================================
+
 // 画面2: プレビュー画面
-// ============================================================
+
 function PreviewScreen({
   previewUrl,
   onRemove,
   onMask,
   isLoading,
   apiError,
+  onImageError,
 }: {
   previewUrl: string;
   onRemove: () => void;
   onMask: () => void;
   isLoading: boolean; // true の間はボタンを無効化し多重送信を防ぐ
   apiError: string | null; // API通信のエラーメッセージ（あれば赤字表示）
+  onImageError: () => void;
 }) {
   return (
     <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -337,6 +346,7 @@ function PreviewScreen({
         <img
           src={previewUrl}
           alt="アップロードされた画像のプレビュー"
+          onError={onImageError}
           className="max-h-full max-w-full object-contain"
         />
       </div>
@@ -368,9 +378,9 @@ function PreviewScreen({
   );
 }
  
-// ============================================================
+
 // 画面3: マスク結果画面
-// ============================================================
+
 function ResultScreen({
   canvasRef,
   onBack,
