@@ -45,12 +45,15 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null); // <img>表示用の一時URL
   const [error, setError] = useState<string | null>(null); // ファイル形式・サイズ等のバリデーションエラー
   const canvasRef = useRef<HTMLCanvasElement>(null); // 画面3のcanvas要素への参照
- 
   // ---- 9/8で追加：顔検知API連携用のstate ----
   const [isLoading, setIsLoading] = useState(false); // API通信中かどうか（ボタンの無効化・表示切替に使う）
   const [boxes, setBoxes] = useState<Box[]>([]); // boxを配列で扱うようにする
   const [apiError, setApiError] = useState<string | null>(null); // API通信で発生したエラーメッセージ
- 
+  //handleMask内だけで参照する多重実行防止フラグ
+  // useRefを使う理由：useStateだと値の更新が次の再レンダリングまで反映されず、
+  // 連打された際にごく僅かな間、2回目の呼び出しをすり抜けてしまう可能性がある。
+  // useRefなら代入した瞬間に値が確定するため、再レンダリングを待たずに確実にガードできる。
+  const isRequestInFlight = useRef(false);
   // ---- ファイルを受け取った時の共通処理（D&Dでもダイアログ選択でも共通） ----
   const acceptFile = (candidate: File | undefined) => {
     if (!candidate) return; // ファイルが選ばれなかった場合は何もしない（キャンセル等）
@@ -103,8 +106,9 @@ export default function Home() {
  
   // 「画像をマスク」ボタン押下時：バックエンド(/api/detect)へ画像を送信し、顔の座標を取得する
   const handleMask = async () => {
-    if (!file) return; // 念のためのガード（通常はfileがある状態でしかこのボタンは押せない）
- 
+    if (!file || isRequestInFlight.current) return; // 念のためのガード（通常はfileがある状態でしかこのボタンは押せない&素手のリクエストが進行中の場合も弾く）
+    
+    isRequestInFlight.current = true //即座にフラグを立てる（再レンダリングを待たない）
     setIsLoading(true); // 通信開始：ボタンを無効化し「処理中...」表示に切り替える
     setApiError(null); // 前回のエラー表示をクリア
  
@@ -130,7 +134,6 @@ export default function Home() {
         // もしそのプロパティがなければステータスコードだけのメッセージにフォールバックする
         const message = data && typeof data.error === "string" ? data.error : `サーバーエラー(ステータス: ${response.status})`;
         setApiError(message);
-        setIsLoading(false);
         return;
 
       }
@@ -138,15 +141,13 @@ export default function Home() {
       
       // resultが配列であることを確認してから中身を見る
       if (!Array.isArray(data.result)) {
-        setApiError("サーバーからの応答が正しくありませんでした");
-        setIsLoading(false);
+        setApiError("サーバーからの応答が正しくありませんでした")
         return;
       }
  
       // 顔検知APIの仕様上、顔が見つからない場合はresultが空配列で返ってくる
       if (data.result.length === 0) {
         setApiError("顔が検出されませんでした");
-        setIsLoading(false);
         return;
       }
  
@@ -161,6 +162,7 @@ export default function Home() {
     } finally {
       // 成功・失敗・途中return、どのルートを通っても最後に必ず通る
       // ボタンの無効化状態を解除し忘れないようにするための保険
+      isRequestInFlight.current = false; //処理後、フラグを戻す
       setIsLoading(false);
     }
   };
