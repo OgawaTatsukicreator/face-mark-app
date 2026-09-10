@@ -75,6 +75,12 @@ export default function Home() {
     setPreviewUrl(URL.createObjectURL(candidate)); // ブラウザ内だけで有効な一時URLを発行
     setScreen("preview"); // 画面遷移図：D&D/選択 → 画面2へ
   };
+
+  //画像の読み込みに失敗した場合の共通処理
+  const handleImageError = () => {
+    handleRemove(); //状態をリセットする
+    setApiError("画像を読み込めませんでした。別の画像を選択してください"); //エラーメッセージをセット
+  }
  
   // ドロップ時のハンドラ：ブラウザのデフォルト動作（画像を別タブで開く等）を止めてacceptFileに渡す
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -103,6 +109,7 @@ export default function Home() {
     setApiError(null); // 前回のAPIエラーメッセージもリセット
     setScreen("upload"); // 画面遷移図：画像を削除 → 画面1へ戻る
   };
+  
  
   // 「画像をマスク」ボタン押下時：バックエンド(/api/detect)へ画像を送信し、顔の座標を取得する
   const handleMask = async () => {
