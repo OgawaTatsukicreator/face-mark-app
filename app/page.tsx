@@ -48,6 +48,45 @@ function drawMask(ctx: CanvasRenderingContext2D, box: Box) {
   ctx.fillText("😊", centerX, centerY);
 }
 
+// 1枚の画像を/api/detectへ送信し、結果を反映したImageItemを返す補助関数
+// 成功・失敗どちらの場合も例外を投げず、必ずImageItemを返す設計にしている
+// （呼び出し側でtry/catchを書かずに済ませるため）
+async function processOneImage(item: ImageItem): Promise<ImageItem> {
+  try {
+    const formData = new FormData();
+    formData.append("file", item.file);
+
+    const response = await fetch("/api/detect", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const message =
+        data && typeof data.error === "string"
+          ? data.error
+          : `サーバーエラー（ステータス: ${response.status}）`;
+      return { ...item, itemError: message };
+    }
+
+    if (!Array.isArray(data.result)) {
+      return { ...item, itemError: "サーバーからの応答が正しくありませんでした" };
+    }
+
+    if (data.result.length === 0) {
+      return { ...item, itemError: "顔が検出されませんでした" };
+    }
+
+    const detectedBoxes = data.result.map((r: { box: Box }) => r.box);
+    return { ...item, boxes: detectedBoxes, itemError: null };
+  } catch (err) {
+    console.error("マスク処理エラー:", err);
+    return { ...item, itemError: "通信に失敗しました" };
+  }
+}
+
 export default function Home() {
   // ---- 画面遷移・ファイル関連のstate ----
   const [screen, setScreen] = useState<Screen>("upload");
@@ -167,72 +206,41 @@ export default function Home() {
   };
 
   //プレビュー画面:次の画像へ
-const handlePreviewNext = () => {
-  setPreviewIndex((prev) => Math.min(images.length - 1, prev + 1));
-};
+  const handlePreviewNext = () => {
+    setPreviewIndex((prev) => Math.min(images.length - 1, prev + 1));
+  };
  
   // 「画像をマスク」ボタン押下時：バックエンド(/api/detect)へ画像を送信し、顔の座標を取得する
   const handleMask = async () => {
-    if (!file || isRequestInFlight.current) return; // 念のためのガード（通常はfileがある状態でしかこのボタンは押せない&素手のリクエストが進行中の場合も弾く）
+    if (images.length === 0 || isRequestInFlight.current) return; // 念のためのガード（通常はfileがある状態でしかこのボタンは押せない&素手のリクエストが進行中の場合も弾く）
     
     isRequestInFlight.current = true //即座にフラグを立てる（再レンダリングを待たない）
-    setIsLoading(true); // 通信開始：ボタンを無効化し「処理中...」表示に切り替える
-    setApiError(null); // 前回のエラー表示をクリア
+    setIsBatchProcessing(true);
+    setProcessedCount(0); 
  
-    try {
-      // ブラウザ→自分のバックエンド(API Route)への送信データを作成
-      const formData = new FormData();
-      formData.append("file", file);
- 
-      // 自分のバックエンド(/api/detect)へPOST
-      // ※ここで直接外部の顔検知APIを叩かないのは、APIキーをブラウザに露出させないため
-      const response = await fetch("/api/detect", {
-        method: "POST",
-        body: formData,
-      });
+    // 各画像の処理を並行して開始する。
+    // 1枚ごとにprocessedCountを更新できるよう、.then()を挟んでいる点がポイント。
+    const promises = images.map((item) =>
+      processOneImage(item).then((result) => {
+        setProcessedCount((prev) => prev + 1); // この画像の処理が終わるたびにカウントアップ
+        return result;
+      })
+    );
 
+    // allSettledを使うことで、1枚が失敗しても他の画像の結果を待ち続けられる
+    const settled = await Promise.allSettled(promises);
 
-      // レスポンスのJSON本文は、成功・失敗どちらの場合でも先に読んでおく
-      const data = await response.json().catch(() => null);
- 
-      // サーバー(/api/detect)がエラーを返した場合：ここで処理を完結させる
-      // （catchには送らない。catchはfetch自体が失敗した場合専用にするため）
-      if (!response.ok) {
-        // サーバーが返している{error:"..."}を優先して表示
-        // もしそのプロパティがなければステータスコードだけのメッセージにフォールバックする
-        const message = data && typeof data.error === "string" ? data.error : `サーバーエラー(ステータス: ${response.status})`;
-        setApiError(message);
-        return;
+    // 各Promiseの結果からImageItemを取り出す。
+    // 通常はprocessOneImage内でエラーも吸収しているので基本的にfulfilledになるが、
+    // 万が一のrejectedに備えて元のitemにフォールバックする
+    const updatedImages = settled.map((result, index) =>
+      result.status === "fulfilled" ? result.value : images[index]
+    );
 
-      }
-
-      
-      // resultが配列であることを確認してから中身を見る
-      if (!Array.isArray(data.result)) {
-        setApiError("サーバーからの応答が正しくありませんでした")
-        return;
-      }
- 
-      // 顔検知APIの仕様上、顔が見つからない場合はresultが空配列で返ってくる
-      if (data.result.length === 0) {
-        setApiError("顔が検出されませんでした");
-        return;
-      }
- 
-      // 正常に座標が取得できた場合：検出された全ての顔の座標を保存する
-      const detectedBoxes = data.result.map((r: {box: Box }) => r.box);
-      setBoxes(detectedBoxes);
-      setScreen("result"); // 画面遷移図：画像をマスク → 画面3へ
-    } catch (err) {
-      // ネットワーク切断、サーバーダウンなど、fetch自体が失敗した場合もここに来る
-      console.error("マスク処理エラー:", err); // 開発者向け：詳細はコンソールにのみ出す
-      setApiError("通信に失敗しました。もう一度お試しください"); // ユーザー向け：詳細を出さず簡潔に
-    } finally {
-      // 成功・失敗・途中return、どのルートを通っても最後に必ず通る
-      // ボタンの無効化状態を解除し忘れないようにするための保険
-      isRequestInFlight.current = false; //処理後、フラグを戻す
-      setIsLoading(false);
-    }
+    setImages(updatedImages);
+    isRequestInFlight.current = false;
+    setIsBatchProcessing(false);
+    setScreen("result"); // 画面遷移図：画像をマスク → 画面3へ
   };
  
   // 「戻る」ボタン押下時：結果画面からプレビュー画面へ戻る
