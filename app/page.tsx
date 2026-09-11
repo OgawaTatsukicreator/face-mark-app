@@ -130,7 +130,7 @@ export default function Home() {
   //画像の読み込みに失敗した場合の共通処理
   const handleImageError = () => {
     handleRemove(); //状態をリセットする
-    setError("画像を読み込めませんでした。別の画像を選択してください"); //エラーメッセージをセット
+    setUploadError("画像を読み込めませんでした。別の画像を選択してください"); //エラーメッセージをセット
   }
  
   // ドロップ時のハンドラ：ブラウザのデフォルト動作（画像を別タブで開く等）を止めてacceptFileに渡す
@@ -152,14 +152,24 @@ export default function Home() {
  
   // 「画像を削除」ボタン押下時：状態を全部リセットしてアップロード画面に戻る
   const handleRemove = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl); // メモリリーク防止：発行した一時URLを解放
-    setFile(null);
-    setPreviewUrl(null);
-    setError(null);
-    setBoxes([]); // 前回のマスク結果を引きずらないようにリセット
-    setApiError(null); // 前回のAPIエラーメッセージもリセット
+    //発行済みのすべての一時URLを開放する：メモリリーク防止
+    images.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+
+    setImages([]);
+    setPreviewIndex(0);
+    setUploadError(null); 
     setScreen("upload"); // 画面遷移図：画像を削除 → 画面1へ戻る
   };
+
+  //プレビュー画面:前の画像へ
+  const handlePreviewPrev = () => {
+    setPreviewIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  //プレビュー画面:次の画像へ
+const handlePreviewNext = () => {
+  setPreviewIndex((prev) => Math.min(images.length - 1, prev + 1));
+};
  
   // 「画像をマスク」ボタン押下時：バックエンド(/api/detect)へ画像を送信し、顔の座標を取得する
   const handleMask = async () => {
@@ -180,6 +190,7 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
+
 
       // レスポンスのJSON本文は、成功・失敗どちらの場合でも先に読んでおく
       const data = await response.json().catch(() => null);
@@ -279,14 +290,16 @@ export default function Home() {
         />
       )}
  
-      {/* 画面2：プレビュー画面（previewUrlがある場合のみ表示） */}
-      {screen === "preview" && previewUrl && (
+      {/* 画面2：プレビュー画面 */}
+      {screen === "preview" && images.length > 0 && (
         <PreviewScreen
-          previewUrl={previewUrl}
+          images={images}
+          previewIndex={previewIndex}
+          onPrev={handlePreviewPrev}
+          onNext={handlePreviewNext}
           onRemove={handleRemove}
-          onMask={handleMask}
-          isLoading={isLoading}
-          apiError={apiError}
+          onMask={handleMask} // まだ単一画像用のまま。STEP4で書き換える
+          isLoading={isBatchProcessing}
           onImageError={handleImageError}
         />
       )}
@@ -373,54 +386,93 @@ function UploadScreen({
 // 画面2: プレビュー画面
 
 function PreviewScreen({
-  previewUrl,
+  images,
+  previewIndex,
+  onPrev,
+  onNext,
   onRemove,
   onMask,
   isLoading,
-  apiError,
   onImageError,
 }: {
-  previewUrl: string;
+  images: ImageItem[]
+  previewIndex: number;
+  onPrev: () => void;
+  onNext: () => void;
   onRemove: () => void;
   onMask: () => void;
   isLoading: boolean; // true の間はボタンを無効化し多重送信を防ぐ
-  apiError: string | null; // API通信のエラーメッセージ（あれば赤字表示）
   onImageError: () => void;
 }) {
+  const current = images[previewIndex]; // 今表示している1枚
+  const isFirst = previewIndex === 0;
+  const isLast = previewIndex === images.length - 1;
+
   return (
     <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
       <h1 className="mb-6 text-lg font-semibold text-slate-800">
         顔をマスクする
       </h1>
- 
-      {/* 選択済み画像のプレビュー表示 */}
-      <div className="flex h-48 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-        <img
-          src={previewUrl}
-          alt="アップロードされた画像のプレビュー"
-          onError={onImageError}
-          className="max-h-full max-w-full object-contain"
-        />
+
+      {/* 画像表示＋矢印ナビゲーション */}
+      <div className="flex items-center gap-2">
+        {/* 1枚目でなければ左矢印を表示 */}
+        {!isFirst && (
+          <button
+            type="button"
+            onClick={onPrev}
+            aria-label="前の画像"
+            className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
+          >
+            ←
+          </button>
+        )}
+
+        <div className="flex h-48 flex-1 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+          <img
+            src={current.previewUrl}
+            alt={`アップロードされた画像 ${previewIndex + 1}枚目のプレビュー`}
+            onError={onImageError}
+            className="max-h-full max-w-full object-contain"
+          />
+        </div>
+
+        {/* 最後の1枚でなければ右矢印を表示 */}
+        {!isLast && (
+          <button
+            type="button"
+            onClick={onNext}
+            aria-label="次の画像"
+            className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
+          >
+            →
+          </button>
+        )}
       </div>
- 
-      {/* API通信エラー表示（顔未検出・通信失敗など） */}
-      {apiError && (
+
+      {/* 「N枚中M番目」のカウンター表示 */}
+      <p className="mt-2 text-center text-xs text-slate-400">
+        {images.length}枚中 {previewIndex + 1}枚目
+      </p>
+
+      {/* この画像固有のエラー表示（一括処理後、結果画面で使う想定。今は常にnull） */}
+      {current.itemError && (
         <p className="mt-3 text-sm text-red-600" role="alert">
-          {apiError}
+          {current.itemError}
         </p>
       )}
- 
+
       <div className="mt-6 flex gap-3">
         <button
           onClick={onRemove}
-          disabled={isLoading} // 通信中は削除も禁止（状態の整合性を保つため）
+          disabled={isLoading}
           className="flex-1 rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
         >
           画像を削除
         </button>
         <button
           onClick={onMask}
-          disabled={isLoading} // 通信中は再送信を禁止
+          disabled={isLoading}
           className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           {isLoading ? "処理中..." : "画像をマスク"}
