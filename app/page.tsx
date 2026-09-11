@@ -308,6 +308,7 @@ export default function Home() {
           onRemove={handleRemove}
           onMask={handleMask} // まだ単一画像用のまま。STEP4で書き換える
           isLoading={isBatchProcessing}
+          processedCount={processedCount}
           onImageError={handleImageError}
         />
       )}
@@ -401,6 +402,7 @@ function PreviewScreen({
   onRemove,
   onMask,
   isLoading,
+  processedCount,
   onImageError,
 }: {
   images: ImageItem[]
@@ -410,6 +412,7 @@ function PreviewScreen({
   onRemove: () => void;
   onMask: () => void;
   isLoading: boolean; // true の間はボタンを無効化し多重送信を防ぐ
+  processedCount: number;
   onImageError: () => void;
 }) {
   const current = images[previewIndex]; // 今表示している1枚
@@ -469,6 +472,14 @@ function PreviewScreen({
           {current.itemError}
         </p>
       )}
+
+      {/* 一括処理中の進捗表示*/}
+      {isLoading && (
+        <p className="mt-3 text-center text-sm text-blue-600">
+          処理中...({processedCount}/{images.length}枚完了)
+        </p>
+      )}
+
 
       <div className="mt-6 flex gap-3">
         <button
