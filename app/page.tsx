@@ -5,6 +5,7 @@ import { useRef, useState, DragEvent, ChangeEvent, useEffect,} from "react";
 // 受け付ける画像形式（これ以外はacceptFileでエラーにする）
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_COUNT = 10 //一括アップロードの上限
  
 // 画面遷移図の3画面に対応するstate
 type Screen = "upload" | "preview" | "result";
@@ -19,6 +20,15 @@ type Box = {
   x_max: number;
   y_max: number;
 };
+
+// 追加機能：複数の画像対応のための、画像1枚分のデータをまとめた型
+// これまでばらばらのstate(file, previewUrl, boxes, apiError)で管理していたものを1つの画像に関する情報を1つのオブジェクトとしてまとめる
+type ImageItem = {
+  file:File;
+  previewUrl:string;
+  boxes:Box[] | null; // 未処理： null/処理済み: Box[] (顔なしの場合は空配列)
+  itemError: string | null; //  この画像固有のエラーメッセージ
+}
 
 
 function drawMask(ctx: CanvasRenderingContext2D, box: Box) {
@@ -41,40 +51,81 @@ function drawMask(ctx: CanvasRenderingContext2D, box: Box) {
 export default function Home() {
   // ---- 画面遷移・ファイル関連のstate ----
   const [screen, setScreen] = useState<Screen>("upload");
-  const [file, setFile] = useState<File | null>(null); // 選択された生のFileオブジェクト（APIへの送信に使う）
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // <img>表示用の一時URL
-  const [error, setError] = useState<string | null>(null); // ファイル形式・サイズ等のバリデーションエラー
   const canvasRef = useRef<HTMLCanvasElement>(null); // 画面3のcanvas要素への参照
-  // ---- 9/8で追加：顔検知API連携用のstate ----
-  const [isLoading, setIsLoading] = useState(false); // API通信中かどうか（ボタンの無効化・表示切替に使う）
-  const [boxes, setBoxes] = useState<Box[]>([]); // boxを配列で扱うようにする
-  const [apiError, setApiError] = useState<string | null>(null); // API通信で発生したエラーメッセージ
-  //handleMask内だけで参照する多重実行防止フラグ
-  // useRefを使う理由：useStateだと値の更新が次の再レンダリングまで反映されず、
-  // 連打された際にごく僅かな間、2回目の呼び出しをすり抜けてしまう可能性がある。
-  // useRefなら代入した瞬間に値が確定するため、再レンダリングを待たずに確実にガードできる。
+
+  // --複数画像対応:ここが変更点--
+  
+  // file, previewUrl, boxes, apiErrorをImages配列に統合
+  const [images, setImages] = useState<ImageItem[]>([]);
+
+  // プレビュー画面で今何枚目を見ているか
+  const [previewIndex, setPreviewIndex] = useState(0);
+
+  //アップロード画面でのバリデーションエラー
+  //11枚目以降は除外されました糖、アップロード全体に関わるerrorもここに含める
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  //一括処理が実行中かどうか
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+
+  //一括処理の進捗。　処理中...(3/10枚完了) の表示で使う
+  const [processedCount, setProcessedCount] = useState(0);
+
+  //「画像マスク」ボタン自体の多重送信防止フラグ(画像ごとではなく、ボタン単位で1つ)
   const isRequestInFlight = useRef(false);
-  // ---- ファイルを受け取った時の共通処理（D&Dでもダイアログ選択でも共通） ----
-  const acceptFile = (candidate: File | undefined) => {
-    if (!candidate) return; // ファイルが選ばれなかった場合は何もしない（キャンセル等）
+
+  const acceptFiles = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return; // ファイルが選ばれなかった場合は何もしない（キャンセル等）
  
-    // 画像形式チェック：ACCEPTED_TYPESに含まれない場合はエラー表示して処理を止める
-    if (!ACCEPTED_TYPES.includes(candidate.type)) {
-      setError("画像ファイル（jpg / png / webp）を選択してください");
+    const filesArray = Array.from(fileList); //FileListは配列メソッドが使えないため、まずは配列に変換する
+    
+    //先頭10枚だけを採用し、11枚目以降は除外する
+    const accepted = filesArray.slice(0, MAX_IMAGE_COUNT);
+    const rejected = filesArray.slice(MAX_IMAGE_COUNT);
+
+    const newItems: ImageItem[] = [];
+    let validationError: string | null = null;
+
+    //採用された各ファイルに対して、1枚ずつバリデーションを行う
+    for (const candidate of accepted) {
+      if (!ACCEPTED_TYPES.includes(candidate.type)) {
+        //1枚でも形式エラーがあれば、その時点で全体を中断する
+        validationError = `「${candidate.name}」は画像ファイル(jpg / png / webp)ではありません`;
+        break;
+      }
+
+      if (candidate.size > MAX_FILE_SIZE) {
+        validationError = `「${candidate.name}」のファイルサイズが大きすぎます(10MB以下にしてください)`
+        break;
+      }
+
+      //バリデーションを通過したら、ImageItemとして追加する
+      newItems.push({
+        file: candidate,
+        previewUrl: URL.createObjectURL(candidate),
+        boxes: null, //まだ未処理
+        itemError: null
+      });
+    }
+
+    //バリデーションエラーがあった場合にそこで処理を止めて画面を遷移しない
+    if (validationError) { 
+      setUploadError(validationError);
       return;
     }
 
-    //ファイルサイズチェック
-    if (candidate.size > MAX_FILE_SIZE) {
-      setError("ファイルサイズが大きすぎます(10MB以下にしてください)");
-      return;
+    //11枚目以降を除外した場合のメッセージ（バリデーションエラーがない場合のみ表示）
+    if (rejected.length > 0) {
+      setUploadError(`最大${MAX_IMAGE_COUNT}枚までです。${rejected.length}舞が洗濯から除外されました`);
+    } else {
+      setUploadError(null);
     }
  
-    setError(null);
-    setFile(candidate);
-    setPreviewUrl(URL.createObjectURL(candidate)); // ブラウザ内だけで有効な一時URLを発行
+    setImages(newItems);
+    setPreviewIndex(0); //常に1枚目から表示を開始する
     setScreen("preview"); // 画面遷移図：D&D/選択 → 画面2へ
   };
+
 
   //画像の読み込みに失敗した場合の共通処理
   const handleImageError = () => {
