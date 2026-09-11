@@ -136,7 +136,7 @@ export default function Home() {
   // ドロップ時のハンドラ：ブラウザのデフォルト動作（画像を別タブで開く等）を止めてacceptFileに渡す
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    acceptFile(e.dataTransfer.files?.[0]);
+    acceptFiles(e.dataTransfer.files);
   };
  
   // ドラッグ中の要素がドロップ領域の上を通過している間、常に呼ばれる
@@ -147,7 +147,7 @@ export default function Home() {
  
   // 通常のファイル選択ダイアログ（<input type="file">）から選んだ場合のハンドラ
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    acceptFile(e.target.files?.[0]);
+    acceptFiles(e.target.files);
   };
  
   // 「画像を削除」ボタン押下時：状態を全部リセットしてアップロード画面に戻る
@@ -272,7 +272,7 @@ export default function Home() {
       {/* 画面1：アップロード画面 */}
       {screen === "upload" && (
         <UploadScreen
-          error={error}
+          uploadError={uploadError}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onFileChange={handleFileChange}
@@ -303,12 +303,12 @@ export default function Home() {
 // 画面1: アップロード画面
 
 function UploadScreen({
-  error,
+  uploadError,
   onDrop,
   onDragOver,
   onFileChange,
 }: {
-  error: string | null;
+  uploadError: string | null;
   onDrop: (e: DragEvent<HTMLDivElement>) => void;
   onDragOver: (e: DragEvent<HTMLDivElement>) => void;
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
@@ -334,15 +334,16 @@ function UploadScreen({
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
+          multiple
           onChange={onFileChange}
           className="hidden" // 見た目上は非表示。クリックはdiv側で拾う
         />
       </div>
  
       {/* バリデーションエラー表示 */}
-      {error && (
+      {uploadError && (
         <p className="mt-3 text-sm text-red-600" role="alert">
-          {error}
+          {uploadError}
         </p>
       )}
  
