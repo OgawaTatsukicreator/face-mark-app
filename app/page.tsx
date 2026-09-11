@@ -90,9 +90,6 @@ async function processOneImage(item: ImageItem): Promise<ImageItem> {
 export default function Home() {
   // ---- 画面遷移・ファイル関連のstate ----
   const [screen, setScreen] = useState<Screen>("upload");
-  const canvasRef = useRef<HTMLCanvasElement>(null); // 画面3のcanvas要素への参照
-
-  // --複数画像対応:ここが変更点--
   
   // file, previewUrl, boxes, apiErrorをImages配列に統合
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -248,43 +245,7 @@ export default function Home() {
     setScreen("preview"); // 画面遷移図：戻る → 画面2へ
   };
  
-  // 画面3（結果画面）が表示されたタイミングで、canvasに元画像を描画する
-  // マスク自体の描画（box座標を使った矩形描画など）は次工程で実装予定
-  useEffect(() => {
-    if (screen !== "result" || !previewUrl || !canvasRef.current) return;
- 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
- 
-    const img = new Image();
-
-    img.onerror = () => {
-      console.error("Canvas描画用の画像読み込みに失敗しました");
-      setApiError("画像を読み込めませんでした");
-      setScreen("preview");
-    };
-
-    img.onload = () => {
-      // canvasのサイズを元画像の実サイズに合わせる
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      boxes.forEach((box) => {
-        drawMask(ctx, box);
-      })
- 
-      // 【動作確認用ログ】画像サイズとbox座標の関係を目視で確認するためのもの。
-      // 座標データ取得の確認が済んだら削除してよい。
-      console.log("画像サイズ:", img.width, img.height);
-      console.log("box座標:", boxes);
-    };
-    img.src = previewUrl;
-    // 【修正】boxが更新されたタイミングでも再実行されるよう依存配列に追加。
-    // 元のコードはscreenとpreviewUrlのみだったため、
-    // box更新のタイミング次第では古い値を参照するリスクがあった。
-  }, [screen, previewUrl, boxes]);
+  
  
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
@@ -315,7 +276,7 @@ export default function Home() {
  
       {/* 画面3：マスク結果画面 */}
       {screen === "result" && (
-        <ResultScreen canvasRef={canvasRef} onBack={handleBack} />
+        <ResultScreen images={images} onBack={handleBack} />
       )}
     </main>
   );
@@ -505,10 +466,10 @@ function PreviewScreen({
 // 画面3: マスク結果画面
 
 function ResultScreen({
-  canvasRef,
+  images,
   onBack,
 }: {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  images: ImageItem[];
   onBack: () => void;
 }) {
   return (
@@ -518,8 +479,10 @@ function ResultScreen({
       </h1>
  
       {/* 元画像＋（将来的には）マスク済みの状態を描画するcanvas */}
-      <div className="flex h-48 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
-        <canvas ref={canvasRef} className="max-h-full max-w-full object-contain" />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {images.map((item, index) => (
+          <ResultThumbnail key={index} item={item} index={index} />
+        ))}
       </div>
  
       <button
@@ -528,6 +491,48 @@ function ResultScreen({
       >
         戻る
       </button>
+    </div>
+  );
+}
+
+// グリッド内の1枠分：自分自身でCanvasへの描画を担当する
+function ResultThumbnail({ item, index }: { item: ImageItem; index: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    // itemErrorがある場合はそもそも描画する画像がないので、canvas処理はスキップ
+    if (item.itemError || !item.boxes || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const img = new Image();
+
+    img.onerror = () => {
+      console.error(`${index + 1}枚目の画像描画に失敗しました`);
+    };
+
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      item.boxes?.forEach((box) => {
+        drawMask(ctx, box);
+      });
+    };
+    img.src = item.previewUrl;
+  }, [item, index]);
+
+  return (
+    <div className="flex aspect-square items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-1">
+      {item.itemError ? (
+        // エラーがある画像は、その枠内にエラーメッセージだけを表示する
+        <p className="px-2 text-center text-xs text-red-600">{item.itemError}</p>
+      ) : (
+        <canvas ref={canvasRef} className="max-h-full max-w-full object-contain" />
+      )}
     </div>
   );
 }
