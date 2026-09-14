@@ -244,6 +244,17 @@ export default function Home() {
   const handleBack = () => {
     setScreen("preview"); // 画面遷移図：戻る → 画面2へ
   };
+
+  // 結果画面のサムネイルでCanvas描画に失敗した場合、該当画像だけにエラーをセットする
+  const handleThumbnailError = (index: number) => {
+    setImages((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? { ...item, itemError: "画像を読み込めませんでした" }
+          : item
+      )
+    );
+  };
  
   
  
@@ -267,7 +278,7 @@ export default function Home() {
           onPrev={handlePreviewPrev}
           onNext={handlePreviewNext}
           onRemove={handleRemove}
-          onMask={handleMask} // まだ単一画像用のまま。STEP4で書き換える
+          onMask={handleMask}
           isLoading={isBatchProcessing}
           processedCount={processedCount}
           onImageError={handleImageError}
@@ -276,7 +287,10 @@ export default function Home() {
  
       {/* 画面3：マスク結果画面 */}
       {screen === "result" && (
-        <ResultScreen images={images} onBack={handleBack} />
+        <ResultScreen images={images} 
+        onBack={handleBack}
+        onThumbnailError={handleThumbnailError} 
+      />
       )}
     </main>
   );
@@ -468,12 +482,14 @@ function PreviewScreen({
 function ResultScreen({
   images,
   onBack,
+  onThumbnailError,
 }: {
   images: ImageItem[];
   onBack: () => void;
+  onThumbnailError: (index: number) => void;
 }) {
   return (
-    <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
+    <div className="w-full max-w-2x1 rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
       <h1 className="mb-6 text-lg font-semibold text-slate-800">
         マスク結果
       </h1>
@@ -481,7 +497,12 @@ function ResultScreen({
       {/* 元画像＋（将来的には）マスク済みの状態を描画するcanvas */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {images.map((item, index) => (
-          <ResultThumbnail key={index} item={item} index={index} />
+          <ResultThumbnail 
+            key={index} 
+            item={item} 
+            index={index}
+            onError={onThumbnailError}
+         />
         ))}
       </div>
  
@@ -496,7 +517,15 @@ function ResultScreen({
 }
 
 // グリッド内の1枠分：自分自身でCanvasへの描画を担当する
-function ResultThumbnail({ item, index }: { item: ImageItem; index: number }) {
+function ResultThumbnail({ 
+  item, 
+  index,
+  onError,
+}: {
+  item: ImageItem; 
+  index: number;
+  onError: (index:number) => void; 
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
