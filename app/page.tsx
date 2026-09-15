@@ -239,11 +239,6 @@ export default function Home() {
     setIsBatchProcessing(false);
     setScreen("result"); // 画面遷移図：画像をマスク → 画面3へ
   };
- 
-  // 「戻る」ボタン押下時：結果画面からプレビュー画面へ戻る
-  const handleBack = () => {
-    setScreen("preview"); // 画面遷移図：戻る → 画面2へ
-  };
 
   // 結果画面のサムネイルでCanvas描画に失敗した場合、該当画像だけにエラーをセットする
   const handleThumbnailError = (index: number) => {
@@ -288,7 +283,7 @@ export default function Home() {
       {/* 画面3：マスク結果画面 */}
       {screen === "result" && (
         <ResultScreen images={images} 
-        onBack={handleBack}
+        onBack={handleRemove}
         onThumbnailError={handleThumbnailError} 
       />
       )}
