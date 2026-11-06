@@ -4,7 +4,7 @@
 
 画像内の顔を検出し、顔の位置に絵文字のマスクを重ねて表示する Web アプリです。JPEG・PNG・WebP を一度に最大10枚まで選べます（各画像10 MB以下）。顔検知は外部 API に依頼し、API キーはサーバー側で使用します。
 
-以前の仕様と検討事項は [.docx/specification.md](.docx/specification.md)、過去の API 疎通記録は [docs/api-test-log.md](docs/api-test-log.md) に保管しています。仕様書には現在の実装と異なる記述もあるため、動作はこの README とコードを参照してください。
+追加機能の要件と受入条件は [.docx/specification.md](.docx/specification.md)、過去の API 疎通記録は [docs/api-test-log.md](docs/api-test-log.md) を参照してください。要件の改訂は実装完了を意味しません。実装と検証の進捗は今後のコミットで記録します。
 
 ## インストール
 
