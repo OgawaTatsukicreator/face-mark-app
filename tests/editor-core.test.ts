@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   activeRegions, clampBox, createHistory, DEFAULT_SETTINGS, editHistory, effectiveBox,
-  HISTORY_LIMIT, redoHistory, sanitizeSettings, undoHistory, type EditState, type Region,
+  HISTORY_LIMIT, patchRegionSettings, redoHistory, sanitizeSettings, undoHistory, type EditState, type Region,
 } from "../lib/editor";
 import { safeFilename } from "../lib/render";
 
@@ -86,4 +86,15 @@ test("download names remove path/control characters, reserved names and wrong ex
   assert.equal(safeFilename("nul.backup.png", "image/png"), "masked-image.png");
   assert.equal(safeFilename(".png", "image/png"), "masked-image.png");
   assert.equal(/[\\/:?*\u0000-\u001f]/.test(safeFilename("../bad:?/\u0000name.png", "image/png")), false);
+});
+
+test("face overrides retain inheritance for settings the user did not change", () => {
+  const face = patchRegionSettings(region("face"), DEFAULT_SETTINGS, { opacity: 0.5 });
+  assert.deepEqual(face.settings, { opacity: 0.5 });
+  const nextDefaults = { ...DEFAULT_SETTINGS, kind: "mosaic" as const, color: "#ff0000" };
+  assert.equal(sanitizeSettings({ ...nextDefaults, ...face.settings }).kind, "mosaic");
+  assert.equal(sanitizeSettings({ ...nextDefaults, ...face.settings }).color, "#ff0000");
+  assert.equal(sanitizeSettings({ ...nextDefaults, ...face.settings }).opacity, 0.5);
+  const bounded = patchRegionSettings(face, nextDefaults, { opacity: 20 });
+  assert.deepEqual(bounded.settings, { opacity: 1 });
 });

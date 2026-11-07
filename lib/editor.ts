@@ -87,6 +87,13 @@ export function sanitizeSettings(input: unknown): MaskSettings {
   };
 }
 
+/** Preserve inheritance: editing opacity must not freeze unrelated image defaults. */
+export function patchRegionSettings(region: Region, defaults: MaskSettings, patch: Partial<MaskSettings>): Region {
+  const validated = sanitizeSettings({ ...defaults, ...region.settings, ...patch });
+  const changed = Object.fromEntries(Object.keys(patch).map(key => [key, validated[key as keyof MaskSettings]]));
+  return { ...region, settings: { ...region.settings, ...changed } };
+}
+
 export function clampBox(box: Box, width: number, height: number): Box | null {
   if (![width, height, box.x_min, box.y_min, box.x_max, box.y_max].every(Number.isFinite)
       || width <= 0 || height <= 0 || box.x_max <= box.x_min || box.y_max <= box.y_min) return null;
