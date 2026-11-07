@@ -1,0 +1,3 @@
+"use client";
+import { useEditor } from "../editor-session";
+export function Comparison() { const { current, compare, setCompare, comparison, setComparison, t } = useEditor(); if (!current) return null; return <div><label className="check"><input type="checkbox" checked={compare} onChange={event => setCompare(event.target.checked)} />{t("ビフォーアフターを比較", "Compare before and after")}</label>{compare && <label className="field"><span>{t("左が元画像・右がマスク後", "Original on left · masked on right")} · {comparison}%</span><input data-testid="comparison" type="range" min="0" max="100" value={comparison} onChange={event => setComparison(Number(event.target.value))} /></label>}</div>; }
