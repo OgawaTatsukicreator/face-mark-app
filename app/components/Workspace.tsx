@@ -27,6 +27,7 @@ import { Language } from "../features/Language";
 import { Progress } from "../features/Progress";
 import { NoFaces } from "../features/NoFaces";
 import { ZoomPan } from "../features/ZoomPan";
+import { Guide } from "../features/Guide";
 
 export function Workspace() {
   const { current, t, loading } = useEditor();
@@ -37,6 +38,6 @@ export function Workspace() {
     <div className="workspace-grid"><section className="panel image-panel"><h2>{t("2. 確認・編集", "2. Review and edit")}</h2>{current && <p className="filename">{current.file.name} · {current.width} × {current.height}</p>}<div className="toolbar"><BoundsToggle /><RegionDelete /><UndoRedo /><ZoomPan /></div><CanvasStage /><Comparison /><Progress /><NoFaces /><SessionMessages /></section>
     {current && <aside className="editor-panels"><BatchDetection /><MultipleFaces /><MaskKind /><MaskAdjustment /><FaceSwitches /><ManualRegion /><Confidence /><section className="panel"><h2>{t("3. 保存・共有", "3. Save and share")}</h2><Download /><CopyOutput /></section></aside>}</div>
     <footer><p>{t("画像と編集履歴は、このページを開いている間だけ保持します。自動検出を実行すると、画像をサーバー経由で外部の顔検知サービスへ送ります。外部サービスの保存方針は運用者に確認してください。", "Images and edit history stay in this page for the current session. Running detection sends the image through the server to an external face detection service. Ask the operator about that service’s retention policy.")}</p></footer>
-
+    <Guide />
   </main>;
 }
