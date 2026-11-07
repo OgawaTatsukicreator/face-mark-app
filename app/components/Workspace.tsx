@@ -22,11 +22,12 @@ import { CopyOutput } from "../features/CopyOutput";
 import { Comparison } from "../features/Comparison";
 import { SessionHistory } from "../features/SessionHistory";
 import { UndoRedo } from "../features/UndoRedo";
+import { Theme } from "../features/Theme";
 
 export function Workspace() {
   const { current, t, loading } = useEditor();
   return <main className="app-shell">
-    <header className="app-header"><div><p className="eyebrow">FACE MASK STUDIO</p><h1>{t("顔を隠して、写真を共有", "Mask faces. Share your photos.")}</h1></div><div className="header-actions"></div></header>
+    <header className="app-header"><div><p className="eyebrow">FACE MASK STUDIO</p><h1>{t("顔を隠して、写真を共有", "Mask faces. Share your photos.")}</h1></div><div className="header-actions"><Theme /></div></header>
     <section className="panel input-panel"><h2>{t("1. 画像を用意", "1. Add images")}</h2><div className="toolbar"><FileInput /><PasteImage /><CameraImage /><SampleInput /></div><p className="muted">JPEG / PNG / WebP · {t("各10 MiB以下・最大10枚", "10 MiB each · up to 10 images")}</p>{loading && <p role="status">{t("画像を読み込んでいます…", "Reading images…")}</p>}</section>
     <SessionHistory />
     <div className="workspace-grid"><section className="panel image-panel"><h2>{t("2. 確認・編集", "2. Review and edit")}</h2>{current && <p className="filename">{current.file.name} · {current.width} × {current.height}</p>}<div className="toolbar"><BoundsToggle /><RegionDelete /><UndoRedo /></div><CanvasStage /><Comparison /><SessionMessages /></section>
