@@ -1,0 +1,3 @@
+"use client";
+import { useEditor } from "../editor-session";
+export function ZoomPan() { const { current, zoom, setZoom, setPan, mode, setMode, t } = useEditor(); if (!current) return null; return <><label className="field"><span>{t("ズーム", "Zoom")} · {Math.round(zoom * 100)}%</span><input data-testid="zoom" type="range" min="0.5" max="4" step="0.1" value={zoom} onChange={event => setZoom(Number(event.target.value))} /></label><button data-testid="pan-mode" aria-pressed={mode === "pan"} onClick={() => setMode(mode === "pan" ? "select" : "pan")}>{t("パン（画像を動かす）", "Pan image")}</button><button data-testid="reset-view" onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); setMode("select"); }}>{t("表示をリセット", "Reset view")}</button></>; }
