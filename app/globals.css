@@ -64,3 +64,9 @@ summary { cursor:pointer; padding:8px 0; font-weight:600; }
 progress { width:100%; accent-color:var(--accent); }
 footer { margin-top:24px; max-width:90ch; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+@media (max-width:1000px) { .workspace-grid { grid-template-columns:minmax(0,1fr); } .editor-panels { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:600px) { .app-shell { padding:14px; } .app-header { align-items:flex-start; flex-direction:column; gap:14px; } .header-actions { width:100%; } .header-actions > label { flex:1; min-width:0; } .panel { padding:14px; border-radius:10px; } .editor-panels { grid-template-columns:minmax(0,1fr); } .canvas-viewport { height:330px; } .toolbar > button { flex-grow:1; } .drop-area { width:100%; } .drop-area .muted { display:block; margin-top:8px; } .history-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .history-card { padding:5px; } .input-panel .toolbar > div { width:100%; } .field { min-width:0; } }
+@media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; } }
+
+.camera-input,.paste-input { min-width:0; } .button-row { display:flex; flex-wrap:wrap; gap:8px; } .input-hint { font-size:.85rem; color:var(--muted); max-width:44ch; } .preferences-save { margin-top:14px; }
