@@ -1,0 +1,3 @@
+"use client";
+import { useEditor } from "../editor-session";
+export function Confidence() { const { edit, updateEdit, t } = useEditor(); if (!edit) return null; return <section className="panel"><label className="field"><span>{t("信頼度の下限", "Minimum confidence")} · {Math.round(edit.threshold * 100)}%</span><input data-testid="threshold" type="range" min="0" max="1" step="0.01" value={edit.threshold} onChange={event => { const threshold = Number(event.target.value); updateEdit(value => ({ ...value, threshold })); }} /></label><p className="muted">{t("手動範囲・信頼度不明の顔は常に対象です。閾値を上げると顔が表示される場合があります。", "Manual regions and unknown confidence remain included. Higher thresholds can leave faces visible.")}</p></section>; }
